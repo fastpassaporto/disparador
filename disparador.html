@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Disparador Prenotami Curitiba</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 80px;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        p {
+            margin-top: 0;
+            color: #555;
+        }
+
+        .container {
+            margin-top: 40px;
+        }
+
+        input {
+            width: 60px;
+            padding: 10px;
+            font-size: 18px;
+            text-align: center;
+            margin: 5px;
+        }
+
+        button {
+            margin-top: 30px;
+            padding: 12px 25px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            background-color: #007BFF;
+            color: white;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Disparador Prenotami Curitiba</h1>
+    <p>Por: fastpassaporto@gmail.com</p>
+
+    <div class="container">
+        <input type="number" id="hora" value="18" min="0" max="23"> :
+        <input type="number" id="minuto" value="00" min="0" max="59"> :
+        <input type="number" id="segundo" value="00" min="0" max="59"> :
+        <input type="number" id="milisegundo" value="000" min="0" max="999">
+        
+        <br>
+
+        <button onclick="agendarDisparo()">Agendar Disparo</button>
+    </div>
+
+    <script>
+        function agendarDisparo() {
+            const hora = parseInt(document.getElementById('hora').value);
+            const minuto = parseInt(document.getElementById('minuto').value);
+            const segundo = parseInt(document.getElementById('segundo').value);
+            const milisegundo = parseInt(document.getElementById('milisegundo').value);
+
+            const agora = new Date();
+            const alvo = new Date();
+
+            alvo.setHours(hora);
+            alvo.setMinutes(minuto);
+            alvo.setSeconds(segundo);
+            alvo.setMilliseconds(milisegundo);
+
+            let delay = alvo - agora;
+
+            if (delay < 0) {
+                alert("Horário já passou hoje.");
+                return;
+            }
+
+            alert("Disparo agendado!");
+
+            setTimeout(() => {
+                window.location.href = "https://prenotami.esteri.it/Services/Booking/4705";
+            }, delay);
+        }
+    </script>
+
+</body>
+</html>
