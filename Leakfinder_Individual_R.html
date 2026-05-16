@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leakfinder Individual</title>
+
+<style>
+:root{
+--bg:#07090d;
+--card:#11141b;
+--border:#202632;
+--text:#fff;
+--muted:#7d8597;
+--green:#3dffb5;
+--red:#ff5f73;
+--yellow:#ffcf5a;
+}
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Inter,Arial,sans-serif;
+}
+body{
+background:
+radial-gradient(circle at top left, rgba(61,255,181,.08), transparent 25%),
+radial-gradient(circle at bottom right, rgba(83,114,255,.06), transparent 30%),
+var(--bg);
+color:var(--text);
+padding:28px;
+}
+.container{
+max-width:1400px;
+margin:auto;
+}
+.top{
+display:flex;
+justify-content:space-between;
+align-items:flex-start;
+margin-bottom:30px;
+}
+h1{
+font-size:52px;
+font-weight:900;
+letter-spacing:-2px;
+margin-bottom:10px;
+}
+.subtitle{
+display:flex;
+gap:18px;
+flex-wrap:wrap;
+color:#7d8597;
+font-size:13px;
+font-weight:600;
+}
+.green{color:#3dffb5;}
+.red{color:#ff5f73;}
+.yellow{color:#ffcf5a;}
+
+.upload{
+background:linear-gradient(135deg,#1c2330,#111720);
+border:1px solid #2c3648;
+padding:14px 18px;
+border-radius:14px;
+font-size:13px;
+font-weight:800;
+cursor:pointer;
+}
+
+input[type=file]{
+display:none;
+}
+
+.card{
+background:linear-gradient(180deg,rgba(18,22,30,.95),rgba(11,14,20,.98));
+border:1px solid #202632;
+border-radius:18px;
+overflow:hidden;
+margin-bottom:14px;
+}
+
+.card-header{
+padding:18px 20px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+cursor:pointer;
+}
+
+.card-left{
+display:flex;
+align-items:center;
+gap:14px;
+}
+
+.expand{
+width:24px;
+height:24px;
+border-radius:8px;
+background:#151b24;
+border:1px solid #2a3342;
+display:flex;
+align-items:center;
+justify-content:center;
+color:#98a5bd;
+}
+
+.card.active .expand{
+transform:rotate(45deg);
+}
+
+.card-title{
+font-size:22px;
+font-weight:900;
+}
+
+.badges{
+display:flex;
+gap:8px;
+}
+
+.badge{
+padding:6px 10px;
+border-radius:8px;
+background:#111722;
+border:1px solid #2a3445;
+font-size:11px;
+font-weight:800;
+color:#c5cede;
+}
+
+.dropdown{
+display:none;
+}
+
+.card.active .dropdown{
+display:block;
+}
+
+.table-header,.row{
+display:grid;
+grid-template-columns:1.2fr 1fr 1fr 1fr 1.4fr;
+align-items:center;
+}
+
+.table-header{
+padding:14px 20px;
+border-top:1px solid #1b2230;
+border-bottom:1px solid #1b2230;
+color:#75809a;
+font-size:11px;
+font-weight:800;
+text-transform:uppercase;
+}
+
+.row{
+padding:16px 20px;
+border-bottom:1px solid #141923;
+}
+
+.name{
+display:flex;
+align-items:center;
+gap:8px;
+font-weight:800;
+}
+
+.dot{
+width:8px;
+height:8px;
+border-radius:999px;
+}
+
+.green-dot{background:#3dffb5;}
+.red-dot{background:#ff5f73;}
+.yellow-dot{background:#ffcf5a;}
+
+.sample{
+font-size:10px;
+color:#647089;
+}
+
+.hero{
+font-size:15px;
+font-weight:900;
+}
+
+.result{
+width:max-content;
+padding:5px 11px;
+border-radius:999px;
+font-size:10px;
+font-weight:900;
+border:1px solid;
+}
+
+.result.good{
+color:#3dffb5;
+border-color:rgba(61,255,181,.35);
+background:rgba(61,255,181,.08);
+}
+
+.result.high{
+color:#ff5f73;
+border-color:rgba(255,95,115,.35);
+background:rgba(255,95,115,.08);
+}
+
+.result.low{
+color:#ffcf5a;
+border-color:rgba(255,207,90,.35);
+background:rgba(255,207,90,.08);
+}
+
+.target,.action{
+font-weight:800;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="top">
+
+<div>
+
+<h1>Leakfinder Individual</h1>
+
+<div class="subtitle">
+<div id="statusText">Waiting CSV Upload</div>
+<div>Total Hands: <strong id="handsTotal">0</strong></div>
+</div>
+
+</div>
+
+<label class="upload">
+Upload CSV
+<input type="file" id="csvUpload" accept=".csv">
+</label>
+
+</div>
+
+<div id="cards"></div>
+
+</div>
+
+<script>
+
+const CONFIG = [
+
+{
+title:'Raise First',
+rows:[
+{pos:'SB',min:25,max:30},
+{pos:'EP',min:16,max:20},
+{pos:'MP',min:24,max:27},
+{pos:'CO',min:35,max:38},
+{pos:'BTN',min:47,max:55}
+]
+},
+
+{
+title:'Limp Open',displayTitle:'SB Limp Open',
+rows:[
+{pos:'SB',min:55,max:65}
+]
+},
+
+{
+title:'Limp/Raise',displayTitle:'SB Limp/Raise',
+rows:[
+{pos:'SB',min:10,max:14}
+]
+},
+
+{
+title:'Limp/Call',displayTitle:'SB Limp/Call',
+rows:[
+{pos:'SB',min:45,max:55}
+]
+},
+
+{
+title:'Limp/Fold',displayTitle:'SB Limp/Fold',
+rows:[
+{pos:'SB',min:35,max:45}
+]
+},
+
+{
+title:'R SB O Limp',displayTitle:'BB Raise SB Open Limp',
+rows:[
+{pos:'BB',min:40,max:45}
+]
+},
+
+{
+title:'Fold BB v SB',
+rows:[
+{pos:'BB',min:35,max:45}
+]
+},
+
+{
+title:'Fold to Steal',
+rows:[
+{pos:'SB',min:70,max:75},
+{pos:'BB',min:30,max:35}
+]
+},
+
+{
+title:'Call PF 2Bet',
+rows:[
+{pos:'SB',min:10,max:14},
+{pos:'BB',min:45,max:55},
+{pos:'EP',min:3,max:6},
+{pos:'MP',min:4,max:7},
+{pos:'CO',min:6,max:9},
+{pos:'BTN',min:9,max:13}
+]
+},
+
+{
+title:'3Bet PF',
+rows:[
+{pos:'SB',min:10,max:14},
+{pos:'BB',min:9,max:13},
+{pos:'EP',min:5,max:7},
+{pos:'MP',min:6,max:8},
+{pos:'CO',min:7,max:10},
+{pos:'BTN',min:8,max:12}
+]
+},
+
+{
+title:'3Bet Steal',
+rows:[
+{pos:'SB',min:16,max:19},
+{pos:'BB',min:16,max:19}
+]
+},
+
+{
+title:'3Bet NAI <35',
+rows:[
+{pos:'SB',min:5,max:8},
+{pos:'BB',min:5,max:8},
+{pos:'EP',min:3,max:6},
+{pos:'MP',min:3,max:6},
+{pos:'CO',min:3,max:6},
+{pos:'BTN',min:3,max:6}
+]
+},
+
+{
+title:'Raise & 4Bet+ PF',
+rows:[
+{pos:'SB',min:12,max:18},
+{pos:'EP',min:15,max:20},
+{pos:'MP',min:15,max:20},
+{pos:'CO',min:12,max:18},
+{pos:'BTN',min:12,max:18}
+]
+},
+
+{
+title:'2Bet PF & Fold',
+rows:[
+{pos:'SB',min:45,max:55},
+{pos:'BB',min:45,max:55},
+{pos:'EP',min:45,max:55},
+{pos:'MP',min:45,max:55},
+{pos:'CO',min:47,max:55},
+{pos:'BTN',min:50,max:57}
+]
+},
+
+{
+title:'3Bet PF & Fold',
+rows:[
+{pos:'SB',min:40,max:50},
+{pos:'BB',min:40,max:50},
+{pos:'EP',min:40,max:50},
+{pos:'MP',min:40,max:50},
+{pos:'CO',min:40,max:50},
+{pos:'BTN',min:40,max:50}
+]
+},
+
+{
+title:'Fold to PF 4Bet After 3Bet <30',
+rows:[
+{pos:'SB',min:35,max:45},
+{pos:'BB',min:35,max:45},
+{pos:'EP',min:35,max:45},
+{pos:'MP',min:35,max:45},
+{pos:'CO',min:35,max:45},
+{pos:'BTN',min:35,max:45}
+]
+},
+
+{
+title:'PF Squeeze',displayTitle:'Squeeze',
+rows:[
+{pos:'SB',min:7,max:11},
+{pos:'BB',min:9,max:15},
+{pos:'MP',min:5,max:7},
+{pos:'CO',min:6,max:9},
+{pos:'BTN',min:8,max:12}
+]
+},
+
+{
+title:'CB F OOP HU',displayTitle:'CBet Flop OOP (HU)',
+rows:[
+{pos:'SB',min:60,max:75},
+{pos:'BB',min:70,max:85},
+{pos:'EP',min:35,max:45},
+{pos:'MP',min:30,max:40},
+{pos:'CO',min:25,max:30}
+]
+},
+
+{
+title:'CB F IP HU',displayTitle:'CBet Flop IP (HU)',
+rows:[
+{pos:'BB',min:55,max:65},
+{pos:'EP',min:80,max:90},
+{pos:'MP',min:75,max:85},
+{pos:'CO',min:75,max:85},
+{pos:'BTN',min:70,max:80}
+]
+},
+
+{
+title:'Flt F HU',displayTitle:'Float Flop (HU)',
+rows:[
+{pos:'BB',min:40,max:50},
+{pos:'EP',min:45,max:55},
+{pos:'MP',min:45,max:55},
+{pos:'CO',min:45,max:55},
+{pos:'BTN',min:45,max:55}
+]
+},
+
+{
+title:'Fold to F CBet (HU)',
+rows:[
+{pos:'SB',min:33,max:38},
+{pos:'BB',min:40,max:45},
+{pos:'EP',min:33,max:38},
+{pos:'MP',min:33,max:38},
+{pos:'CO',min:28,max:35},
+{pos:'BTN',min:27,max:33}
+]
+},
+
+{
+title:'Fold to F CBet (3B)',
+rows:[
+{pos:'SB',min:30,max:40},
+{pos:'EP',min:35,max:45},
+{pos:'MP',min:35,max:45},
+{pos:'CO',min:30,max:35},
+{pos:'BTN',min:30,max:35}
+]
+},
+
+{
+title:'Fld to F Flt HU',displayTitle:'Fold to Flop Float (HU)',
+rows:[
+{pos:'SB',min:25,max:35},
+{pos:'EP',min:30,max:40},
+{pos:'MP',min:30,max:40},
+{pos:'CO',min:30,max:40}
+]
+},
+
+{
+title:'CB F & Fld HU',displayTitle:'CBet Flop & Fold (HU)',
+rows:[
+{pos:'SB',min:33,max:43},
+{pos:'BB',min:33,max:43},
+{pos:'EP',min:33,max:43},
+{pos:'MP',min:33,max:43},
+{pos:'CO',min:33,max:43},
+{pos:'BTN',min:33,max:43}
+]
+},
+
+{
+title:'Raise F CBet (HU)',displayTitle:'Raise Flop CBet (HU)',
+rows:[
+{pos:'SB',min:16,max:20},
+{pos:'BB',min:16,max:20},
+{pos:'EP',min:14,max:18},
+{pos:'MP',min:14,max:18},
+{pos:'CO',min:12,max:18},
+{pos:'BTN',min:7,max:10}
+]
+},
+
+{
+title:'XR F HU',displayTitle:'XR Flop (HU)',
+rows:[
+{pos:'SB',min:16,max:20},
+{pos:'BB',min:16,max:20},
+{pos:'EP',min:16,max:20},
+{pos:'MP',min:16,max:20},
+{pos:'CO',min:16,max:20}
+]
+},
+
+{
+title:'Raise F CBet (3B)',displayTitle:'Raise Flop CBet (3B)',
+rows:[
+{pos:'SB',min:15,max:19},
+{pos:'EP',min:12,max:18},
+{pos:'MP',min:12,max:18},
+{pos:'CO',min:8,max:14},
+{pos:'BTN',min:6,max:10}
+]
+},
+
+{
+title:'Dnk T HU',displayTitle:'Donk Turn (HU)',
+rows:[
+{pos:'SB',min:5,max:8},
+{pos:'BB',min:7,max:11},
+{pos:'EP',min:5,max:7},
+{pos:'MP',min:5,max:7},
+{pos:'CO',min:4,max:6}
+]
+},
+
+{
+title:'CB T HU',displayTitle:'CBet Turn (HU)',
+rows:[
+{pos:'SB',min:47,max:57},
+{pos:'BB',min:47,max:57},
+{pos:'EP',min:47,max:57},
+{pos:'MP',min:47,max:57},
+{pos:'CO',min:47,max:57},
+{pos:'BTN',min:47,max:57}
+]
+},
+
+{
+title:'Float T',displayTitle:'Float Turn',
+rows:[
+{pos:'BB',min:45,max:55},
+{pos:'EP',min:45,max:55},
+{pos:'MP',min:45,max:55},
+{pos:'CO',min:45,max:55},
+{pos:'BTN',min:45,max:55}
+]
+},
+
+{
+title:'Prb T HU',displayTitle:'Probe Turn',
+rows:[
+{pos:'SB',min:35,max:45},
+{pos:'BB',min:35,max:45},
+{pos:'EP',min:35,max:45},
+{pos:'MP',min:35,max:45},
+{pos:'CO',min:35,max:45}
+]
+},
+
+{
+title:'Probe T HU & Bet R',displayTitle:'Probe Turn & Bet River (HU)',
+rows:[
+{pos:'SB',min:55,max:65},
+{pos:'BB',min:55,max:65}
+]
+},
+
+{
+title:'Fold to T CBet',displayTitle:'Fold to Turn CBet',
+rows:[
+{pos:'SB',min:35,max:45},
+{pos:'BB',min:35,max:45},
+{pos:'EP',min:35,max:45},
+{pos:'MP',min:35,max:45},
+{pos:'CO',min:33,max:43},
+{pos:'BTN',min:33,max:43}
+]
+},
+
+{
+title:'Fld to T Pr HU',displayTitle:'Fold to Turn Probe (HU)',
+rows:[
+{pos:'BB',min:30,max:40},
+{pos:'EP',min:30,max:40},
+{pos:'MP',min:30,max:40},
+{pos:'CO',min:30,max:40},
+{pos:'BTN',min:30,max:40}
+]
+},
+
+{
+title:'Raise T CBet',displayTitle:'Raise Turn CBet',
+rows:[
+{pos:'SB',min:7,max:10},
+{pos:'BB',min:7,max:10},
+{pos:'EP',min:7,max:10},
+{pos:'MP',min:7,max:10},
+{pos:'CO',min:7,max:10},
+{pos:'BTN',min:7,max:10}
+]
+},
+
+{
+title:'Raise T Probe(HU)',displayTitle:'Raise Turn Probe (HU)',
+rows:[
+{pos:'BB',min:7,max:10},
+{pos:'EP',min:7,max:10},
+{pos:'MP',min:7,max:10},
+{pos:'CO',min:7,max:10},
+{pos:'BTN',min:7,max:10}
+]
+},
+
+{
+title:'Donk R',displayTitle:'Donk River',
+rows:[
+{pos:'SB',min:6,max:9},
+{pos:'BB',min:6,max:9},
+{pos:'EP',min:6,max:9},
+{pos:'MP',min:6,max:9},
+{pos:'CO',min:6,max:9}
+]
+},
+
+{
+title:'CBet R',displayTitle:'CBet River',
+rows:[
+{pos:'SB',min:47,max:57},
+{pos:'BB',min:47,max:57},
+{pos:'EP',min:47,max:57},
+{pos:'MP',min:47,max:57},
+{pos:'CO',min:47,max:57},
+{pos:'BTN',min:47,max:57}
+]
+},
+
+{
+title:'Fold to R CBet',displayTitle:'Fold to River CBet',
+rows:[
+{pos:'SB',min:40,max:50},
+{pos:'BB',min:40,max:50},
+{pos:'EP',min:40,max:50},
+{pos:'MP',min:40,max:50},
+{pos:'CO',min:40,max:50},
+{pos:'BTN',min:40,max:50}
+]
+}
+
+];
+
+
+
+const COUNT_MAP = {
+'Raise First':'Raise First Count',
+'Limp Open':'Limp Open Count',
+'Limp/Raise':'Limp/Raise Count',
+'Limp/Call':'Limp/Call Count',
+'Limp/Fold':'Limp/Fold Count',
+'R SB O Limp':'Raise SB Open Limp Count',
+'Fold BB v SB':'Fold BB v SB Count',
+'Fold to Steal':'Fold to Steal Count',
+'Call PF 2Bet':'Call PF 2Bet Count',
+'3Bet PF':'3Bet PF Count',
+'3Bet Steal':'3Bet Steal Count',
+'3Bet NAI <35':'3Bet NAI <35 Count',
+'Raise & 4Bet+ PF':'Raise & 4Bet+ PF Count',
+'2Bet PF & Fold':'2Bet PF & Fold Count',
+'3Bet PF & Fold':'3Bet PF & Fold Count',
+'Fold to PF 4Bet After 3Bet <30':'Fold to PF 4Bet After 3Bet <30 Count',
+'PF Squeeze':'PF Squeeze Count',
+'CB F OOP HU':'CBet F OOP (HU) Count',
+'CB F IP HU':'CBet F IP (HU) Count',
+'Flt F HU':'Float F HU Count',
+'Fld to F Flt HU':'Fold to F Float HU Count',
+'Fold to F CBet (HU)':'Fold to F Cbet (HU) Count',
+'Fold to F CBet (3B)':'Fold to F CBet (3B) Count',
+'CB F & Fld HU':'CBet F & Fold (HU) Count',
+'Raise F CBet (HU)':'Raise F CBet (HU) Count',
+'XR F HU':'XR Flop HU Count',
+'Raise F CBet (3B)':'Raise F CBet (3B) Count',
+'Dnk T HU':'Donk T (HU) Count',
+'CB T HU':'CBet T (HU) Count',
+'Float T':'Float T Count',
+'Prb T HU':'Probe T (HU) Count',
+'Probe T HU & Bet R':'Probe T HU & Bet R Count',
+'Fold to T CBet':'Fold to T CBet Count',
+'Fld to T Pr HU':'F to T Pr (HU) Count',
+'Raise T CBet':'Raise T CBet Count',
+'Raise T Probe(HU)':'Raise T Probe (HU) Count',
+'Donk R':'Donk R Count',
+'CBet R':'CBet R Count',
+'Fold to River CBet':'Fold to River CBet Count'
+};
+
+
+const ACTION_MAP = {
+'Raise First': {under:'Raise More',good:'Good Job',over:'Raise Less'},
+'Limp Open': {under:'Limp More',good:'Good Job',over:'Limp Less'},
+'Limp/Raise': {under:'L/R More',good:'Good Job',over:'L/R Less'},
+'Limp/Call': {under:'L/C More',good:'Good Job',over:'L/C Less'},
+'Limp/Fold': {under:'L/F More',good:'Good Job',over:'L/F Less'},
+'R SB O Limp': {under:'Raise More',good:'Good Job',over:'Raise Less'},
+'Fold BB v SB': {under:'Fold More',good:'Good Job',over:'Fold Less'},
+'Fold to Steal': {under:'Fold More',good:'Good Job',over:'Fold Less'},
+'Call PF 2Bet': {under:'Call More',good:'Good Job',over:'Call Less'},
+'3Bet PF': {under:'3Bet More',good:'Good Job',over:'3Bet Less'},
+'3Bet Steal': {under:'3Bet Steal More',good:'Good Job',over:'3Bet Steal Less'},
+'3Bet NAI <35': {under:'3Bet More',good:'Good Job',over:'3Bet Less'},
+'Raise & 4Bet+ PF': {under:'4Bet More',good:'Good Job',over:'4Bet Less'},
+'2Bet PF & Fold': {under:'Fold More',good:'Good Job',over:'Fold Less'},
+'3Bet PF & Fold': {under:'Fold More',good:'Good Job',over:'Fold Less'},
+'Fold to PF 4Bet After 3Bet <30': {under:'Fold More',good:'Good Job',over:'Fold Less'},
+'PF Squeeze': {under:'Squeeze More',good:'Good Job',over:'Squeeze Less'},
+'CB F OOP HU': {under:'Bet More',good:'Good Job',over:'Bet Less'},
+'CB F IP HU': {under:'Bet More',good:'Good Job',over:'Bet Less'},
+'Flt F HU': {under:'Bet More',good:'Good Job',over:'Bet Less'},
+'Fold to F CBet (HU)': {under:'Fold More',good:'Good Job',over:'Fold Less'},
+'Fold to F CBet (3B)': {under:'Fold More',good:'Good Job',over:'Fold Less'},
+'Fold to F Float HU': {under:'Fold More',good:'Good Job',over:'Fold Less'},
+'CB F & Fld HU': {under:'Fold More',good:'Good Job',over:'Fold Less'},
+'Raise F CBet (HU)': {under:'Raise More',good:'Good Job',over:'Raise Less'},
+'XR F HU': {under:'Raise More',good:'Good Job',over:'Raise Less'},
+'Raise F CBet (3B)': {under:'Raise More',good:'Good Job',over:'Raise Less'},
+'Dnk T HU': {under:'Donk More',good:'Good Job',over:'Donk Less'},
+'CB T HU': {under:'Bet More',good:'Good Job',over:'Bet Less'},
+'Float T': {under:'Bet More',good:'Good Job',over:'Bet Less'},
+'Prb T HU': {under:'Bet More',good:'Good Job',over:'Bet Less'},
+'Probe T HU & Bet R': {under:'Bet More',good:'Good Job',over:'Bet Less'},
+'Fold to T CBet': {under:'Fold More',good:'Good Job',over:'Fold Less'},
+'Fld to T Pr HU': {under:'Fold More',good:'Good Job',over:'Fold Less'},
+'Raise T CBet': {under:'Raise More',good:'Good Job',over:'Raise Less'},
+'Raise T Probe(HU)': {under:'Raise More',good:'Good Job',over:'Raise Less'},
+'Donk R': {under:'Donk More',good:'Good Job',over:'Donk Less'},
+'CBet R': {under:'Bet More',good:'Good Job',over:'Bet Less'},
+'Fold to River CBet': {under:'Fold More',good:'Good Job',over:'Fold Less'}
+};
+
+
+let csvRows = [];
+
+function normalize(v){
+
+return String(v || '')
+.replace(/"/g,'')
+.replace(/\uFEFF/g,'')
+.trim()
+.toLowerCase();
+
+}
+
+function parseNumber(v){
+
+if(!v) return 0;
+
+return parseFloat(
+String(v)
+.replace(/"/g,'')
+.replace('%','')
+.replace(',','.')
+.trim()
+) || 0;
+
+}
+
+function getRow(position){
+
+return csvRows.find(r => {
+
+const positionKey =
+Object.keys(r).find(k =>
+normalize(k) === 'position'
+);
+
+if(!positionKey) return false;
+
+return normalize(r[positionKey]) === normalize(position);
+
+});
+
+}
+
+function getStat(position, stat){
+
+const row = getRow(position);
+
+if(!row) return 0;
+
+const statKey =
+Object.keys(row).find(k =>
+normalize(k) === normalize(stat)
+);
+
+if(!statKey) return 0;
+
+return parseNumber(row[statKey]);
+
+}
+
+function getHands(position){
+
+const row = getRow(position);
+
+if(!row) return 0;
+
+const handsKey =
+Object.keys(row).find(k =>
+normalize(k) === 'hands'
+);
+
+if(!handsKey) return 0;
+
+return row[handsKey];
+
+}
+
+
+
+
+
+
+
+function getCount(rows,position,stat){
+
+const row = rows.find(r => 
+String(r.Position).trim().toUpperCase() === String(position).trim().toUpperCase()
+);
+
+if(!row) return '0';
+
+const map = {
+'Raise First':'Raise First Count',
+'Limp Open':'Limp Open Count',
+'Limp/Raise':'Limp/Raise Count',
+'Limp/Call':'Limp/Call Count',
+'Limp/Fold':'Limp/Fold Count',
+'R SB O Limp':'Raise SB Open Limp Count',
+'Fold BB v SB':'Fold BB v SB Count',
+'Fold to Steal':'Fold to Steal Count',
+'Call PF 2Bet':'Call PF 2Bet Count',
+'3Bet PF':'3Bet PF Count',
+'3Bet Steal':'3Bet Steal Count',
+'3Bet NAI <35':'3Bet NAI <35 Count',
+'Raise & 4Bet+ PF':'Raise & 4Bet+ PF Count',
+'2Bet PF & Fold':'2Bet PF & Fold Count',
+'3Bet PF & Fold':'3Bet PF & Fold Count',
+'Fold to PF 4Bet After 3Bet <30':'Fold to PF 4Bet After 3Bet <30 Count',
+'PF Squeeze':'PF Squeeze Count',
+'CB F OOP HU':'CBet F OOP (HU) Count',
+'CB F IP HU':'CBet F IP (HU) Count',
+'Flt F HU':'Float F HU Count',
+'Fld to F Flt HU':'Fold to F Float HU Count',
+'Fold to F CBet (HU)':'Fold to F Cbet (HU) Count',
+'Fold to F CBet (3B)':'Fold to F CBet (3B) Count',
+'CB F & Fld HU':'CBet F & Fold (HU) Count',
+'Raise F CBet (HU)':'Raise F CBet (HU) Count',
+'XR F HU':'XR Flop HU Count',
+'Raise F CBet (3B)':'Raise F CBet (3B) Count',
+'Dnk T HU':'Donk T (HU) Count',
+'CB T HU':'CBet T (HU) Count',
+'Float T':'Float T Count',
+'Prb T HU':'Probe T (HU) Count',
+'Probe T HU & Bet R':'Probe T HU & Bet R Count',
+'Fold to T CBet':'Fold to T CBet Count',
+'Fld to T Pr HU':'F to T Pr (HU) Count',
+'Raise T CBet':'Raise T CBet Count',
+'Raise T Probe(HU)':'Raise T Probe (HU) Count',
+'Donk R':'Donk R Count',
+'CBet R':'CBet R Count',
+'Fold to River CBet':'Fold to River CBet Count'
+};
+
+const col = map[stat];
+
+if(!col) return '0';
+
+
+const value = row[col] || '0';
+
+return String(value)
+.replace('.00','')
+.replace(',00','');
+
+
+}
+
+
+
+
+
+function analyze(v,min,max,stat){
+
+const map = ACTION_MAP[stat] || {
+under:'Increase',
+good:'Good Job',
+over:'Decrease'
+};
+
+if(v < min){
+return {
+label:'LOW',
+class:'low',
+dot:'yellow-dot',
+color:'yellow',
+action:map.under
+};
+}
+
+if(v > max){
+return {
+label:'HIGH',
+class:'high',
+dot:'red-dot',
+color:'red',
+action:map.over
+};
+}
+
+return {
+label:'GOOD',
+class:'good',
+dot:'green-dot',
+color:'green',
+action:map.good
+};
+
+}
+
+
+function render(){
+
+const container =
+document.getElementById('cards');
+
+container.innerHTML = '';
+
+CONFIG.forEach(stat => {
+
+let rowsHTML = '';
+
+stat.rows.forEach(r => {
+
+const value =
+getStat(r.pos, stat.title);
+
+const hands =
+getHands(r.pos);
+
+const count =
+getCount(csvRows,r.pos,stat.title);
+
+const result =
+analyze(value,r.min,r.max,stat.title);
+
+rowsHTML += `
+
+<div class="row">
+
+<div class="name">
+
+<div class="dot ${result.dot}"></div>
+
+<div>
+${r.pos}
+
+<span class="sample">
+${count}
+</span>
+
+</div>
+
+</div>
+
+<div class="hero ${result.color}">
+${value}%
+</div>
+
+<div>
+<div class="result ${result.class}">
+${result.label}
+</div>
+</div>
+
+<div class="${result.color} target">
+${r.min}% - ${r.max}%
+</div>
+
+<div class="${result.color} action">
+${result.action}
+</div>
+
+</div>
+
+`;
+
+});
+
+const card =
+document.createElement('div');
+
+card.className = 'card';
+
+card.innerHTML = `
+
+<div class="card-header">
+
+<div class="card-left">
+
+<div class="expand">
++
+</div>
+
+<div class="card-title">
+${stat.displayTitle || stat.title}
+</div>
+
+</div>
+
+</div>
+
+<div class="dropdown">
+
+<div class="table-header">
+
+<div>Position</div>
+<div>Hero</div>
+<div>Result</div>
+<div>Target</div>
+<div>Req. Action</div>
+
+</div>
+
+${rowsHTML}
+
+</div>
+
+`;
+
+card.querySelector('.card-header')
+.addEventListener('click',()=>{
+
+card.classList.toggle('active');
+
+});
+
+container.appendChild(card);
+
+});
+
+}
+
+document.getElementById('csvUpload')
+.addEventListener('change', e => {
+
+const file = e.target.files[0];
+
+if(!file) return;
+
+const reader = new FileReader();
+
+reader.onload = function(ev){
+
+const text = ev.target.result;
+
+const lines =
+text.split(/\r?\n/)
+.filter(x => x.trim());
+
+const headers =
+lines[0]
+.match(/(".*?"|[^",]+)(?=,|$)/g)
+.map(h =>
+h.replace(/"/g,'').trim()
+);
+
+csvRows =
+lines.slice(1).map(line => {
+
+const values =
+line.match(/(".*?"|[^",]+)(?=,|$)/g) || [];
+
+const obj = {};
+
+headers.forEach((h,i) => {
+
+obj[h] =
+(values[i] || '')
+.replace(/"/g,'')
+.trim();
+
+});
+
+return obj;
+
+});
+
+const totalRow =
+csvRows.find(r =>
+normalize(r['Position']) === 'total'
+);
+
+if(totalRow){
+
+document.getElementById('handsTotal')
+.innerText =
+totalRow['Hands'];
+
+} else if(csvRows.length){
+
+const lastRow =
+csvRows[csvRows.length - 1];
+
+const lastHandsKey =
+Object.keys(lastRow).find(k =>
+normalize(k) === 'hands'
+);
+
+if(lastHandsKey){
+
+document.getElementById('handsTotal')
+.innerText =
+lastRow[lastHandsKey];
+
+}
+
+}
+
+document.getElementById('statusText')
+.innerText =
+'CSV Loaded Successfully';
+
+render();
+
+};
+
+reader.readAsText(file);
+
+});
+
+render();
+
+</script>
+
+</body>
+</html>
